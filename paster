@@ -14,6 +14,35 @@ Options:
 EOF
 }
 
+detect_filetype_by_file() {
+    case "$1" in
+        "C source"*)
+            echo 'cpp'
+            exit;;
+        *"shell script"*)
+            echo 'bash'
+            exit;;
+        "Python script"*)
+            echo 'python'
+            exit;;
+        "Perl script"*)
+            echo 'perl'
+            exit;;
+        "awk script"*)
+            echo 'awk'
+            exit;;
+        "Ruby script"*)
+            echo 'ruby'
+            exit;;
+        "PHP script"*)
+            echo 'php'
+            exit;;
+        "HTML document"*)
+            echo 'html'
+            exit;;
+    esac
+}
+
 detect_filetype() {
     ext="${1##*.}"
     case "$ext" in
@@ -59,32 +88,7 @@ detect_filetype() {
     esac
 
     info=$(file -b "$1")
-    case "$info" in
-        "C source"*)
-            echo 'cpp'
-            exit;;
-        *"shell script"*)
-            echo 'bash'
-            exit;;
-        "Python script"*)
-            echo 'python'
-            exit;;
-        "Perl script"*)
-            echo 'perl'
-            exit;;
-        "awk script"*)
-            echo 'awk'
-            exit;;
-        "Ruby script"*)
-            echo 'ruby'
-            exit;;
-        "PHP script"*)
-            echo 'php'
-            exit;;
-        "HTML document"*)
-            echo 'html'
-            exit;;
-    esac
+    echo $(detect_filetype_by_file "$info")
 }
 
 input_file=
@@ -147,6 +151,8 @@ then
     fi
 else
     snippet=$(cat)
+    info=$(echo "$snippet" | file -b -)
+    filetype=$(detect_filetype_by_file "$info")
 fi
 
 if [ ${#snippet} -eq "0" ];
