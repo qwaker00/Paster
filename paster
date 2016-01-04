@@ -89,7 +89,7 @@ detect_filetype() {
     esac
 
     info=$(file -b "$1")
-    echo $(detect_filetype_by_file "$info")
+    detect_filetype_by_file "$info"
 }
 
 input_file=
