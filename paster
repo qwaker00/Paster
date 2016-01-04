@@ -1,0 +1,74 @@
+#!/bin/sh
+
+show_help() {
+	cat << EOF
+Usage: paster [OPTIONS]
+Paste text snippet to paste.ee
+Options:
+  -f, --file <filename>        use file <filename> as a snippet. 
+  								 if not provided snippet got from stdin
+  -d, --description <text>     use <text> as paste description
+  -h, --help                   display this help and exit
+EOF
+}
+
+input_file=
+description=
+
+while echo "$1" | grep -q ^-; do
+    case "$1" in
+      -h|--help) 
+		  show_help; 
+		  exit 0;;
+
+      -v|--verbose) 
+		  verbose=1; 
+		  shift;;
+
+	  -d|--description) 
+		  if [ "$#" -gt "1" ]; then
+            description=$2; 
+			shift 2
+          else 
+            echo "$1 requires an argument" 1>&2
+            exit 1
+          fi ;;
+ 
+
+      -f|--file) 
+		  if [ "$#" -gt "1" ]; then
+            input_file=$2; 
+			shift 2
+          else 
+            echo "$1 requires an argument" 1>&2
+            exit 1
+          fi ;;
+
+      --) 
+		  shift; 
+		  break;;
+
+      -*) 
+		  echo "invalid option: $1" >&2;
+		  show_help; 
+		  exit 1;;
+    esac
+done
+
+if [ ! -z $input_file ];
+then
+	snippet=`cat $input_file`
+else
+	snippet=`cat`
+fi
+
+paste_url=`curl -X POST http://paste.ee/api -d "key=public&format=simple&description=$description&paste=$snippet" 2>/dev/null`
+echo "$paste_url"
+
+if which xdg-open > /dev/null
+then
+	xdg-open "$paste_url" >/dev/null 2>/dev/null
+else
+	echo "Cant find xdg-open to open link" >&2
+fi
+
