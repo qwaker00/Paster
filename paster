@@ -5,69 +5,172 @@ show_help() {
 Usage: paster [OPTIONS]
 Paste text snippet to paste.ee
 Options:
-  -f, --file <filename>        use file <filename> as a snippet. 
+  -f, --file <filename>        use file <filename> as a snippet.
                                  if not provided snippet got from stdin
   -d, --description <text>     use <text> as paste description
+  -l, --lang <lang>            use <language> as paste language
+                                 if not provided auto detection used
   -h, --help                   display this help and exit
 EOF
 }
 
+detect_filetype() {
+    local ext="${1##*.}"
+    case "$ext" in
+        awk)
+            echo "awk"
+            exit;;
+        txt)
+            echo "plain"
+            exit;;
+        sh|bash)
+            echo "bash"
+            exit;;
+        c)
+            echo "c"
+            exit;;
+        cpp|hpp|cc|h)
+            echo "cpp"
+            exit;;
+        java)
+            echo "java"
+            exit;;
+        py)
+            echo "python"
+            exit;;
+        js)
+            echo "javascript"
+            exit;;
+        pl)
+            echo "perl"
+            exit;;
+        rb)
+            echo "ruby"
+            exit;;
+        htm|html)
+            echo "html5"
+            exit;;
+        css)
+            echo "css"
+            exit;;
+        php)
+            echo "php"
+            exit;;
+    esac
+
+    local info="$(file -b $1)"
+    case "$info" in
+        "C source"*)
+            echo 'cpp'
+            exit;;
+        *"shell script"*)
+            echo 'bash'
+            exit;;
+        "Python script"*)
+            echo 'python'
+            exit;;
+        "Perl script"*)
+            echo 'perl'
+            exit;;
+        "awk script"*)
+            echo 'awk'
+            exit;;
+        "Ruby script"*)
+            echo 'ruby'
+            exit;;
+        "PHP script"*)
+            echo 'php'
+            exit;;
+        "HTML document"*)
+            echo 'html'
+            exit;;
+    esac
+}
+
 input_file=
 description=
+filetype=
 
 while echo "$1" | grep -q ^-; do
     case "$1" in
-      -h|--help) 
-          show_help; 
-          exit 0;;
+        -h|--help)
+            show_help;
+            exit 0;;
 
-      -v|--verbose) 
-          verbose=1; 
-          shift;;
+        -v|--verbose)
+            verbose=1;
+            shift;;
 
-      -d|--description) 
-          if [ "$#" -gt "1" ]; then
-            description=$2; 
-            shift 2
-          else 
-            echo "$1 requires an argument" 1>&2
-            exit 1
-          fi ;;
- 
+        -d|--description)
+            if [ "$#" -gt "1" ]; then
+                description=$2;
+                shift 2
+            else
+                echo "$1 requires an argument" 1>&2
+                exit 1
+            fi ;;
 
-      -f|--file) 
-          if [ "$#" -gt "1" ]; then
-            input_file=$2; 
-            shift 2
-          else 
-            echo "$1 requires an argument" 1>&2
-            exit 1
-          fi ;;
+        -l|--lang)
+            if [ "$#" -gt "1" ]; then
+                filetype=$2;
+                shift 2
+            else
+                echo "$1 requires an argument" 1>&2
+                exit 1
+            fi ;;
 
-      --) 
-          shift; 
-          break;;
+        -f|--file)
+            if [ "$#" -gt "1" ]; then
+                input_file=$2;
+                shift 2
+            else
+                echo "$1 requires an argument" 1>&2
+                exit 1
+            fi ;;
 
-      -*) 
-          echo "invalid option: $1" >&2;
-          show_help; 
-          exit 1;;
+        --)
+            shift;
+            break;;
+
+        -*)
+            echo "invalid option: $1" >&2;
+            show_help;
+            exit 1;;
     esac
 done
 
 if [ ! -z "$input_file" ];
 then
-	if [ ! -f "$input_file" ];
-	then
-		echo "File '$input_file' not found"
-		exit 1;
-	fi
-	snippet=$(cat "$input_file")
+    if [ ! -f "$input_file" ];
+    then
+        echo "File '$input_file' not found"
+        exit 1;
+    fi
+    snippet=$(cat "$input_file")
+
+    if [ -z "$filetype" ];
+    then
+        filetype=$(detect_filetype "$input_file")
+    fi
 else
-	snippet=$(cat)
+    snippet=$(cat)
 fi
 
-paste_url=$(curl -v -X POST http://paste.ee/api -d "key=public&format=simple&description=$description&paste=$snippet" 2>/dev/null)
+if [ ${#snippet} -eq "0" ];
+then
+    echo 'Snippet is empty' >&2
+    exit 1
+fi
+
+snippet=$(echo "$snippet" | python -c 'import urllib, sys; sys.stdout.write(urllib.quote(sys.stdin.read()))')
+
+paste_url=$(curl -X POST http://paste.ee/api -d "key=public&format=simple&description=$description&paste=$snippet&language=$filetype" 2>/dev/null)
+if [ "$?" -ne "0" ];
+then
+    echo 'Curl error. Failed to post paste' >&2
+    exit 1
+fi
+
 echo "$paste_url"
 
 if which xdg-open > /dev/null
