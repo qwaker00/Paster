@@ -15,7 +15,7 @@ EOF
 }
 
 detect_filetype() {
-    local ext="${1##*.}"
+    ext="${1##*.}"
     case "$ext" in
         awk)
             echo "awk"
@@ -58,7 +58,7 @@ detect_filetype() {
             exit;;
     esac
 
-    local info="$(file -b $1)"
+    info=$(file -b "$1")
     case "$info" in
         "C source"*)
             echo 'cpp'
@@ -97,10 +97,6 @@ while echo "$1" | grep -q ^-; do
             show_help;
             exit 0;;
 
-        -v|--verbose)
-            verbose=1;
-            shift;;
-
         -d|--description)
             if [ "$#" -gt "1" ]; then
                 description=$2;
@@ -128,12 +124,9 @@ while echo "$1" | grep -q ^-; do
                 exit 1
             fi ;;
 
-        --)
-            shift;
-            break;;
-
         -*)
             echo "invalid option: $1" >&2;
+            echo >&2;
             show_help;
             exit 1;;
     esac
